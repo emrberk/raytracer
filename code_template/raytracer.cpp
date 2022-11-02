@@ -139,6 +139,7 @@ public:
         IntersectData intersectData;
         parser::Vec3f diffuseComponent = { 0, 0, 0 };
         parser::Vec3f ambientComponent;
+        parser::Vec3f specularComponent = { 0, 0, 0 };
 
         for (int i = 0; i < scene.spheres.size(); i++) {
             parser::Sphere sphere = scene.spheres[i];
@@ -188,16 +189,26 @@ public:
                 parser::Face face = scene.meshes[intersectData.id].faces[intersectData.faceID];
                 surfaceNormal = findTriangleNormal(face);
             }
+            // float cosTheta = std::max(0.0f,dot(surfaceNormal,lightNormal));
             float cosTheta = dot(surfaceNormal,lightNormal) < 0 ? -dot(surfaceNormal,lightNormal) : dot(surfaceNormal,lightNormal);
             // std::max(0.0f,dot(surfaceNormal,lightNormal));
             parser::Vec3f irradiance = findIrradiance(light.intensity,lightDirection,intersectionPoint);
             parser::Vec3f diffuse = material->diffuse;
             diffuseComponent = add(diffuseComponent, multiplyTwo(multiply(irradiance, cosTheta), diffuse));
 
+            //specular
+            parser::Vec3f viewNormal = normalize(subtract(this->origin,intersectionPoint));
+            parser::Vec3f halfVectorNormal = normalize(add(lightNormal,viewNormal));
+            parser::Vec3f specular = material->specular;
+            // float cosAlpha = std::pow(std::max(0.0f, dot(surfaceNormal, halfVectorNormal)), material->phong_exponent);
+            float cosAlpha = dot(surfaceNormal,halfVectorNormal) < 0 ? -dot(surfaceNormal,halfVectorNormal) 
+                                                                    : dot(surfaceNormal,halfVectorNormal);
+            float phongScalar = std::pow(cosAlpha,material->phong_exponent);
+            specularComponent = add(specularComponent, multiplyTwo(multiply(irradiance, phongScalar), specular));
         }
 
         ambientComponent = multiplyTwo(material->ambient, scene.ambient_light);
-        color = add(ambientComponent, diffuseComponent);
+        color = add(specularComponent, add(ambientComponent, diffuseComponent));
         return color;
     }
 };
