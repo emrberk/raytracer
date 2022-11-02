@@ -137,7 +137,8 @@ public:
         parser::Material* material = nullptr;
         parser::Vec3f color  = convert(scene.background_color);
         IntersectData intersectData;
-        parser::Vec3f diffuseComponent;
+        parser::Vec3f diffuseComponent = { 0, 0, 0 };
+        parser::Vec3f ambientComponent = { 0, 0, 0 };
 
         for (int i = 0; i < scene.spheres.size(); i++) {
             parser::Sphere sphere = scene.spheres[i];
@@ -190,11 +191,12 @@ public:
             float cosTheta = dot(surfaceNormal,lightNormal);
             parser::Vec3f irradiance = findIrradiance(light.intensity,lightDirection,intersectionPoint);
             parser::Vec3f diffuse = material->diffuse;
-            diffuseComponent = scale(multiplyTwo(multiply(irradiance, cosTheta), diffuse));
+            diffuseComponent = add(diffuseComponent, multiplyTwo(multiply(irradiance, cosTheta), diffuse));
+
         }
 
-        parser::Vec3f ambient = scale(material->ambient);
-        color = add(ambient, diffuseComponent);
+        //ambientComponent = add(ambientComponent, multiplyTwo(material->ambient, irradiance));
+        //color = add(ambientComponent, diffuseComponent);
         return color;
     }
 };
