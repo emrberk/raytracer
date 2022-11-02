@@ -14,11 +14,38 @@ T multiply(T first, float scalar) {
 }
 
 template<class T>
+T multiplyTwo(T first, T second) {
+    T result;
+    result.x = first.x * second.x;
+    result.y = first.y * second.y;
+    result.z = first.z * second.z;
+    return result;
+}
+
+template<class T>
 T add(T first, T second) {
     T result;
     result.x = first.x + second.x;
     result.y = first.y + second.y;
     result.z = first.z + second.z;
+    return result;
+}
+
+template<class T, class N>
+T add(T first, N num) {
+    T result;
+    result.x = first.x + num;
+    result.y = first.y + num;
+    result.z = first.z + num;
+    return result;
+}
+
+template<class T>
+T subtract(T first, T second) {
+    T result;
+    result.x = first.x - second.x;
+    result.y = first.y - second.y;
+    result.z = first.z - second.z;
     return result;
 }
 
@@ -43,8 +70,8 @@ float length(T vec) {
 
 template<class T>
 T normalize(T vector) {
-    float dot = dot(vector, vector);
-    float k = 1.0 / sqrt(dot);
+    float dotProduct = dot(vector, vector);
+    float k = 1.0 / sqrt(dotProduct);
     return multiply(vector, k);
 }
 
@@ -64,6 +91,11 @@ void printVec(T vec) {
 template<class T>
 float determinant(T i00, T i01, T i02, T i10, T i11, T i12, T i20, T i21, T i22) {
     return i00 * (i11 * i22 - i12* i21) + i10 * (i02 * i21 - i01 * i22) + i20 * (i01 * i12 - i11 * i02);
+}
+
+template<class T>
+T scale(T vec) {
+    return add(multiply(vec, 255), 0.5);
 }
 
 #endif

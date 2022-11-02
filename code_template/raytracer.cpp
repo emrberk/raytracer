@@ -6,9 +6,46 @@
 
 typedef unsigned char RGB[3];
 parser::Vec3f u;
+
+typedef enum SurfaceType { TRIANGLE, SPHERE, MESH } SurfaceType;
 parser::Scene scene;
 
+typedef struct {
+    float t;
+    SurfaceType type;
+    int id;
+    int faceID;
+} IntersectData;
 
+parser::Vec3f findSphereNormal(parser::Sphere sphere, parser::Vec3f point) {
+    parser::Vec3f center = scene.vertex_data[sphere.center_vertex_id - 1];
+    parser::Vec3f normal = normalize(subtract(point, center));
+    return normal;
+}
+
+parser::Vec3f findTriangleNormal(parser::Face face) {
+    parser::Vec3f p1 = scene.vertex_data[face.v0_id - 1];
+    parser::Vec3f p2 = scene.vertex_data[face.v1_id - 1];
+    parser::Vec3f p3 = scene.vertex_data[face.v2_id - 1];
+    parser::Vec3f edge1 = subtract(p2, p1);
+    parser::Vec3f edge2 = subtract(p3, p1);
+    return normalize(cross(edge1, edge2));
+}
+
+parser::Vec3f findIrradiance(parser::Vec3f intensity, parser::Vec3f lightDirection, parser::Vec3f intersectionPoint) {
+    float lightDistance = length(lightDirection);
+    parser::Vec3f irradiance = multiply(intensity, 1.0 / pow(lightDistance,2));
+    return irradiance;
+}
+
+int clamp(int a) {
+    if (a > 255) {
+        return 255;
+    } else if (a < 0) {
+        return 0;
+    }
+    return a;
+}
 
 class Ray {
 public:
@@ -99,32 +136,66 @@ public:
         float minT = INT_MAX;
         parser::Material* material = nullptr;
         parser::Vec3f color  = convert(scene.background_color);
-        for (auto& sphere : scene.spheres) {
+        IntersectData intersectData;
+        parser::Vec3f diffuseComponent;
+
+        for (int i = 0; i < scene.spheres.size(); i++) {
+            parser::Sphere sphere = scene.spheres[i];
             float t = intersect(sphere);
             if (t >= 0 && t < minT) {
                 minT = t;
                 material = &scene.materials[sphere.material_id - 1];
+                intersectData = { minT, SPHERE, i, -1 };
             }
         }
-        for (auto& triangle : scene.triangles) {
+        for (int i = 0; i < scene.triangles.size(); i++) {
+            parser::Triangle triangle = scene.triangles[i];
             float t = intersect(triangle.indices);
             if (t >= 0 && t < minT) {
                 minT = t;
                 material = &scene.materials[triangle.material_id - 1];
+                intersectData = { minT, TRIANGLE, i, -1 };
             }
         }
-        for (auto& mesh : scene.meshes) {
-            for (auto& face : mesh.faces) {
+        for (int i = 0; i < scene.meshes.size(); i++) {
+            parser::Mesh mesh = scene.meshes[i];
+            for (int j = 0; j < mesh.faces.size(); j++) {
+                parser::Face face = mesh.faces[j];
                 float t = intersect(face);
                 if (t >= 0 && t < minT) {
                     minT = t;
                     material = &scene.materials[mesh.material_id - 1];
+                    intersectData = { minT, MESH, i, j };
                 }
             }
         }
+        //printVec(material ? material->ambient : color);
         // ambient + diffuse + spectacular calculation
+        if (!material)
+            return color;
+        
+        for (auto& light : scene.point_lights) {
+            parser::Vec3f intersectionPoint = add(origin, multiply(direction, minT));
+            parser::Vec3f lightDirection = subtract(light.position, intersectionPoint);
+            parser::Vec3f lightNormal = normalize(lightDirection);
+            parser::Vec3f surfaceNormal;
+            if (intersectData.type == SPHERE) {
+                surfaceNormal = findSphereNormal(scene.spheres[intersectData.id], intersectionPoint);
+            } else if (intersectData.type == TRIANGLE) {
+                surfaceNormal = findTriangleNormal(scene.triangles[intersectData.id].indices);
+            } else {
+                parser::Face face = scene.meshes[intersectData.id].faces[intersectData.faceID];
+                surfaceNormal = findTriangleNormal(face);
+            }
+            float cosTheta = dot(surfaceNormal,lightNormal);
+            parser::Vec3f irradiance = findIrradiance(light.intensity,lightDirection,intersectionPoint);
+            parser::Vec3f diffuse = material->diffuse;
+            diffuseComponent = scale(multiplyTwo(multiply(irradiance, cosTheta), diffuse));
+        }
 
-        return material ? material->ambient : color;
+        parser::Vec3f ambient = scale(material->ambient);
+        color = add(ambient, diffuseComponent);
+        return color;
     }
 };
 
@@ -169,9 +240,9 @@ int main(int argc, char* argv[])
 
                 parser::Vec3f color = r->computeColor();
                 
-                image[(y * camera.image_width + x) * 3] = int(color.x * 255 + 0.5);
-                image[(y * camera.image_width + x) * 3 + 1] = int(color.y * 255 + 0.5);;
-                image[(y * camera.image_width + x) * 3 + 2] = int(color.z * 255 + 0.5);;
+                image[(y * camera.image_width + x) * 3] = clamp(int(color.x));
+                image[(y * camera.image_width + x) * 3 + 1] = clamp(int(color.y));
+                image[(y * camera.image_width + x) * 3 + 2] = clamp(int(color.z));
                 delete r;
             }
         }
