@@ -138,7 +138,7 @@ public:
         parser::Vec3f color  = convert(scene.background_color);
         IntersectData intersectData;
         parser::Vec3f diffuseComponent = { 0, 0, 0 };
-        parser::Vec3f ambientComponent = { 0, 0, 0 };
+        parser::Vec3f ambientComponent;
 
         for (int i = 0; i < scene.spheres.size(); i++) {
             parser::Sphere sphere = scene.spheres[i];
@@ -188,15 +188,16 @@ public:
                 parser::Face face = scene.meshes[intersectData.id].faces[intersectData.faceID];
                 surfaceNormal = findTriangleNormal(face);
             }
-            float cosTheta = dot(surfaceNormal,lightNormal);
+            float cosTheta = dot(surfaceNormal,lightNormal) < 0 ? -dot(surfaceNormal,lightNormal) : dot(surfaceNormal,lightNormal);
+            // std::max(0.0f,dot(surfaceNormal,lightNormal));
             parser::Vec3f irradiance = findIrradiance(light.intensity,lightDirection,intersectionPoint);
             parser::Vec3f diffuse = material->diffuse;
             diffuseComponent = add(diffuseComponent, multiplyTwo(multiply(irradiance, cosTheta), diffuse));
 
         }
 
-        //ambientComponent = add(ambientComponent, multiplyTwo(material->ambient, irradiance));
-        //color = add(ambientComponent, diffuseComponent);
+        ambientComponent = multiplyTwo(material->ambient, scene.ambient_light);
+        color = add(ambientComponent, diffuseComponent);
         return color;
     }
 };
@@ -227,6 +228,7 @@ int main(int argc, char* argv[])
 
     int i = 0;
     for (auto& camera : scene.cameras) {
+        // gaze has a problem with not integer values !!!!!
         u = cross(camera.gaze, camera.up);
         unsigned char* image = new unsigned char [camera.image_width * camera.image_height * 3];
         for (int y = 0; y < camera.image_height; ++y) {
@@ -242,9 +244,9 @@ int main(int argc, char* argv[])
 
                 parser::Vec3f color = r->computeColor();
                 
-                image[(y * camera.image_width + x) * 3] = clamp(int(color.x));
-                image[(y * camera.image_width + x) * 3 + 1] = clamp(int(color.y));
-                image[(y * camera.image_width + x) * 3 + 2] = clamp(int(color.z));
+                image[(y * camera.image_width + x) * 3] = clamp(int(color.x + 0.5));
+                image[(y * camera.image_width + x) * 3 + 1] = clamp(int(color.y + 0.5));
+                image[(y * camera.image_width + x) * 3 + 2] = clamp(int(color.z + 0.5));
                 delete r;
             }
         }
