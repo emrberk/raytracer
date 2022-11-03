@@ -1,5 +1,6 @@
 #include <iostream>
 #include <float.h>
+#include <climits>
 #include "parser.h"
 #include "ppm.h"
 #include "utils.h"
