@@ -116,7 +116,14 @@ private:
         parser::Vec3f p3 = scene.vertex_data[face.v2_id - 1];
         parser::Vec3f edge1 = subtract(p2, p1);
         parser::Vec3f edge2 = subtract(p3, p1);
-        return normalize(cross(edge1, edge2));
+        parser::Vec3f normal = normalize(cross(edge1, edge2));
+
+        // if ( dot(this->direction,normal) < 0 ) {
+        //     return normal;
+        // } else {
+        //     return multiply(normal, -1);
+        // }
+        return normal;
     }
 
     IntersectData intersectWithObjects() {
@@ -168,7 +175,7 @@ private:
         parser::Material* material = intersectData.material;
 
         // Diffuse
-        float cosTheta = dot(surfaceNormal,lightNormal) < 0 ? -dot(surfaceNormal,lightNormal) : dot(surfaceNormal,lightNormal);
+        float cosTheta = std::max(0.0f,dot(surfaceNormal,lightNormal)); // < 0 ? -dot(surfaceNormal,lightNormal) : dot(surfaceNormal,lightNormal);
         parser::Vec3f diffuse = material->diffuse;
         diffuseComponent = add(diffuseComponent, multiplyTwo(multiply(irradiance, cosTheta), diffuse));
 
@@ -176,9 +183,7 @@ private:
         parser::Vec3f viewNormal = normalize(subtract(this->origin,intersectionPoint));
         parser::Vec3f halfVectorNormal = normalize(add(lightNormal,viewNormal));
         parser::Vec3f specular = material->specular;
-        float cosAlpha = dot(surfaceNormal,halfVectorNormal) < 0
-            ? -dot(surfaceNormal,halfVectorNormal) 
-            : dot(surfaceNormal,halfVectorNormal);
+        float cosAlpha = std::max(0.0f,dot(surfaceNormal,halfVectorNormal));
         float phongScalar = pow(cosAlpha, material->phong_exponent);
         specularComponent = add(specularComponent, multiplyTwo(multiply(irradiance, phongScalar), specular));
 
@@ -198,7 +203,7 @@ public:
         parser::Vec3f start = add(m, add(multiply(u,left),multiply(camera.up,top)));
         parser::Vec3f rayPoint = add(start,add(multiply(u,su),multiply(camera.up,-sv)));
         this->origin = camera.position;
-        this->direction = normalize(add(rayPoint,multiply(camera.position, -1)));
+        this->direction = normalize(subtract(rayPoint,camera.position));
     }
 
     Ray(parser::Vec3f origin, parser::Vec3f direction) {
@@ -234,7 +239,7 @@ public:
             parser::Vec3f lightNormal = normalize(lightDirection);
 
             // The light will have no effect on the color in case of a shadow existence.
-            parser::Vec3f error = multiply(lightNormal, scene.shadow_ray_epsilon);
+            parser::Vec3f error = multiply(surfaceNormal, scene.shadow_ray_epsilon);
             parser::Vec3f shadowOrigin = add(intersectionPoint, error);
             Ray shadowRay = Ray(shadowOrigin, lightNormal);
             IntersectData shadowIntersection = shadowRay.intersectWithObjects();
@@ -249,9 +254,9 @@ public:
 
         // Mirror reflections
 
-        if (material->is_mirror && recursionDepth >= 0) {
-            float cosTheta = dot(surfaceNormal, direction) < 0 ? -dot(surfaceNormal, direction) : dot(surfaceNormal, direction);
-            parser::Vec3f newDirection = add(direction, multiply(multiply(surfaceNormal, cosTheta), 2));
+        if (material->is_mirror && recursionDepth > 0) {
+            float cosTheta = dot(surfaceNormal, multiply(direction,-1)); // < 0 ? -dot(surfaceNormal, direction) : dot(surfaceNormal, direction);
+            parser::Vec3f newDirection = normalize(add(direction, multiply(multiply(surfaceNormal, cosTheta), 2)));
             parser::Vec3f error = multiply(newDirection, scene.shadow_ray_epsilon);
             parser::Vec3f newOrigin = add(intersectionPoint, error);
             Ray newRay = Ray(newOrigin, newDirection);

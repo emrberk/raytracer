@@ -58,7 +58,7 @@ template<class T>
 T cross(T vec1, T vec2) {
     T result;
     result.x = vec1.y * vec2.z - vec1.z * vec2.y;
-    result.y = vec1.x * vec2.z - vec1.z * vec2.x;
+    result.y = vec1.z * vec2.x - vec1.x * vec2.z;
     result.z = vec1.x * vec2.y - vec1.y * vec2.x;
     return result;
 }
