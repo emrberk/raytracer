@@ -98,4 +98,13 @@ T scale(T vec) {
     return add(multiply(vec, 255), 0.5);
 }
 
+int clamp(int a) {
+    if (a > 255) {
+        return 255;
+    } else if (a < 0) {
+        return 0;
+    }
+    return a;
+}
+
 #endif
