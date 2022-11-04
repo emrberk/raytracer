@@ -269,9 +269,7 @@ int main(int argc, char* argv[]) {
     scene.loadFromXml(argv[1]);
     int recursionDepth = scene.max_recursion_depth;
 
-    int i = 0;
     for (auto& camera : scene.cameras) {
-        // gaze has a problem with not integer values !!!!!
         u = cross(camera.gaze, camera.up);
         unsigned char* image = new unsigned char [camera.image_width * camera.image_height * 3];
         for (int y = 0; y < camera.image_height; ++y) {
@@ -286,11 +284,8 @@ int main(int argc, char* argv[]) {
                 delete r;
             }
         }
-        std::string name = "test";
-        name.append(std::to_string(i));
-        name.append(".ppm");
-        const char* c = name.c_str();
-        write_ppm(c, image, camera.image_width, camera.image_height);
-        i++;
+
+        const char* imageName = camera.image_name.c_str();
+        write_ppm(imageName, image, camera.image_width, camera.image_height);
     }
 }
