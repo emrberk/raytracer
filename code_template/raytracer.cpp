@@ -19,9 +19,9 @@ typedef struct {
     int faceID;
 } IntersectData;
 
-parser::Vec3f findIrradiance(parser::Vec3f intensity, parser::Vec3f lightDirection, parser::Vec3f intersectionPoint) {
+parser::Vec3f findIrradiance(parser::Vec3f intensity, parser::Vec3f lightDirection) {
     float lightDistance = length(lightDirection);
-    parser::Vec3f irradiance = multiply(intensity, 1.0 / pow(lightDistance, 2));
+    parser::Vec3f irradiance = divide(intensity, lightDistance * lightDistance);
     return irradiance;
 }
 
@@ -114,15 +114,10 @@ private:
         parser::Vec3f p1 = scene.vertex_data[face.v0_id - 1];
         parser::Vec3f p2 = scene.vertex_data[face.v1_id - 1];
         parser::Vec3f p3 = scene.vertex_data[face.v2_id - 1];
-        parser::Vec3f edge1 = subtract(p2, p1);
-        parser::Vec3f edge2 = subtract(p3, p1);
+        parser::Vec3f edge1 = subtract(p3, p2);
+        parser::Vec3f edge2 = subtract(p1, p2);
         parser::Vec3f normal = normalize(cross(edge1, edge2));
 
-        // if ( dot(this->direction,normal) < 0 ) {
-        //     return normal;
-        // } else {
-        //     return multiply(normal, -1);
-        // }
         return normal;
     }
 
@@ -169,7 +164,7 @@ private:
     parser::Vec3f getLightComponents(parser::PointLight light, parser::Vec3f intersectionPoint, IntersectData intersectData, parser::Vec3f surfaceNormal) {
         parser::Vec3f lightDirection = subtract(light.position, intersectionPoint);
         parser::Vec3f lightNormal = normalize(lightDirection);
-        parser::Vec3f irradiance = findIrradiance(light.intensity,lightDirection,intersectionPoint);
+        parser::Vec3f irradiance = findIrradiance(light.intensity,lightDirection);
         parser::Vec3f diffuseComponent = { 0, 0, 0 };
         parser::Vec3f specularComponent = { 0, 0, 0 };
         parser::Material* material = intersectData.material;
@@ -220,8 +215,8 @@ public:
         parser::Vec3f intersectionPoint = add(origin, multiply(direction, intersectData.t));
         parser::Material* material = intersectData.material;
         parser::Vec3f ambientComponent = multiplyTwo(material->ambient, scene.ambient_light);
+        color = ambientComponent;
         parser::Vec3f lightComponents = { 0, 0, 0 };
-        parser::Vec3f reflectionComponents = { 0, 0, 0 };
         parser::Vec3f surfaceNormal;
 
         if (intersectData.type == SPHERE) {
@@ -252,23 +247,21 @@ public:
         }
 
         // Mirror reflections
-
+        parser::Vec3f currentColor = add(color, add(ambientComponent, lightComponents));
         if (material->is_mirror && recursionDepth > 0) {
-            float cosTheta = dot(surfaceNormal, multiply(direction,-1)); // < 0 ? -dot(surfaceNormal, direction) : dot(surfaceNormal, direction);
+            float cosTheta = std::max(0.0f, dot(surfaceNormal, multiply(direction, -1)));
             parser::Vec3f newDirection = normalize(add(direction, multiply(multiply(surfaceNormal, cosTheta), 2)));
             parser::Vec3f error = multiply(newDirection, scene.shadow_ray_epsilon);
             parser::Vec3f newOrigin = add(intersectionPoint, error);
-            Ray newRay = Ray(newOrigin, newDirection);
-            IntersectData newIntersection = newRay.intersectWithObjects();
-            
-            if (newIntersection.type != NONE) {
-                parser::Vec3f newColor = multiplyTwo(newRay.computeColor(recursionDepth - 1), material->mirror);
-                reflectionComponents = add(reflectionComponents, newColor);
-            }
+            parser::Vec3f mirrorCoefficient = material->mirror;
+            this->direction = newDirection;
+            this->origin = newOrigin;
+            parser::Vec3f reflectedColor = this->computeColor(recursionDepth - 1);
+            parser::Vec3f mirrorComponent = multiplyTwo(reflectedColor, mirrorCoefficient);
+            currentColor = add(currentColor, mirrorComponent);
         }
 
-        color = add(add(ambientComponent, lightComponents), reflectionComponents);
-        return color;
+        return clampVec(currentColor);
     }
 };
 
@@ -287,9 +280,9 @@ int main(int argc, char* argv[]) {
 
                 parser::Vec3f color = r->computeColor(recursionDepth);
                 
-                image[(y * camera.image_width + x) * 3] = clamp(int(color.x + 0.5));
-                image[(y * camera.image_width + x) * 3 + 1] = clamp(int(color.y + 0.5));
-                image[(y * camera.image_width + x) * 3 + 2] = clamp(int(color.z + 0.5));
+                image[(y * camera.image_width + x) * 3] = color.x;
+                image[(y * camera.image_width + x) * 3 + 1] = color.y;
+                image[(y * camera.image_width + x) * 3 + 2] = color.z;
                 delete r;
             }
         }

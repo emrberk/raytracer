@@ -63,6 +63,15 @@ T cross(T vec1, T vec2) {
     return result;
 }
 
+template<class T, class N>
+T divide(T vec, N number) {
+    T result;
+    result.x = vec.x / number;
+    result.y = vec.y / number;
+    result.z = vec.z / number;
+    return result;
+}
+
 template<class T>
 float length(T vec) {
     return sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
