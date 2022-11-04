@@ -214,16 +214,15 @@ public:
     parser::Vec3f computeColor(int recursionDepth) {
         parser::Vec3f color = convert(scene.background_color);
         IntersectData intersectData = intersectWithObjects();
+        if (intersectData.type == NONE) {
+            return color;
+        }
         parser::Vec3f intersectionPoint = add(origin, multiply(direction, intersectData.t));
         parser::Material* material = intersectData.material;
         parser::Vec3f ambientComponent = multiplyTwo(material->ambient, scene.ambient_light);
         parser::Vec3f lightComponents = { 0, 0, 0 };
         parser::Vec3f reflectionComponents = { 0, 0, 0 };
         parser::Vec3f surfaceNormal;
-
-        if (intersectData.type == NONE) {
-            return color;
-        }
 
         if (intersectData.type == SPHERE) {
             surfaceNormal = findSphereNormal(scene.spheres[intersectData.id], intersectionPoint);

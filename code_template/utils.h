@@ -98,7 +98,8 @@ T scale(T vec) {
     return add(multiply(vec, 255), 0.5);
 }
 
-int clamp(int a) {
+template<class T>
+T clamp(T a) {
     if (a > 255) {
         return 255;
     } else if (a < 0) {
@@ -106,5 +107,15 @@ int clamp(int a) {
     }
     return a;
 }
+
+template<class T>
+T clampVec(T vec) {
+    T result;
+    result.x = clamp(vec.x);
+    result.y = clamp(vec.y);
+    result.z = clamp(vec.z);
+    return result;
+}
+
 
 #endif
