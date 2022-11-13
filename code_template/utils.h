@@ -128,7 +128,7 @@ T clampVec(T vec) {
 }
 
 bool parser::Vec3f::operator!=(Vec3f a) {
-    return x != a.x || y != a.y || z == a.z;
+    return x != a.x || y != a.y || z != a.z;
 }
 
 #endif

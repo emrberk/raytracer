@@ -215,7 +215,6 @@ public:
         parser::Vec3f intersectionPoint = add(origin, multiply(direction, intersectData.t));
         parser::Material* material = intersectData.material;
         parser::Vec3f ambientComponent = multiplyTwo(material->ambient, scene.ambient_light);
-        color = ambientComponent;
         parser::Vec3f lightComponents = { 0, 0, 0 };
         parser::Vec3f surfaceNormal;
 
@@ -246,7 +245,7 @@ public:
             lightComponents = add(lightComponents, getLightComponents(light, intersectionPoint, intersectData, surfaceNormal));
         }
         // Mirror reflections
-        parser::Vec3f currentColor = add(color, add(ambientComponent, lightComponents));
+        parser::Vec3f currentColor = add(ambientComponent, lightComponents);
         if (material->is_mirror && recursionDepth > 0) {
             float cosTheta = std::max(0.0f, dot(surfaceNormal, multiply(direction, -1)));
             parser::Vec3f newDirection = normalize(add(direction, multiply(multiply(surfaceNormal, cosTheta), 2)));
