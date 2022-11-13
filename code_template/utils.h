@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <iostream>
+#include "parser.h"
 
 template<class T>
 T multiply(T first, float scalar) {
@@ -126,5 +127,8 @@ T clampVec(T vec) {
     return result;
 }
 
+bool parser::Vec3f::operator!=(Vec3f a) {
+    return x != a.x || y != a.y || z == a.z;
+}
 
 #endif

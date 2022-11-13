@@ -170,7 +170,7 @@ private:
         parser::Material* material = intersectData.material;
 
         // Diffuse
-        float cosTheta = std::max(0.0f,dot(surfaceNormal,lightNormal)); // < 0 ? -dot(surfaceNormal,lightNormal) : dot(surfaceNormal,lightNormal);
+        float cosTheta = std::max(0.0f,dot(surfaceNormal,lightNormal));
         parser::Vec3f diffuse = material->diffuse;
         diffuseComponent = add(diffuseComponent, multiplyTwo(multiply(irradiance, cosTheta), diffuse));
 
@@ -245,7 +245,6 @@ public:
 
             lightComponents = add(lightComponents, getLightComponents(light, intersectionPoint, intersectData, surfaceNormal));
         }
-
         // Mirror reflections
         parser::Vec3f currentColor = add(color, add(ambientComponent, lightComponents));
         if (material->is_mirror && recursionDepth > 0) {
@@ -257,8 +256,10 @@ public:
             this->direction = newDirection;
             this->origin = newOrigin;
             parser::Vec3f reflectedColor = this->computeColor(recursionDepth - 1);
-            parser::Vec3f mirrorComponent = multiplyTwo(reflectedColor, mirrorCoefficient);
-            currentColor = add(currentColor, mirrorComponent);
+            if (reflectedColor != convert(scene.background_color)) {
+                parser::Vec3f mirrorComponent = multiplyTwo(reflectedColor, mirrorCoefficient);
+                currentColor = add(currentColor, mirrorComponent);
+            }
         }
 
         return clampVec(currentColor);

@@ -11,6 +11,7 @@ namespace parser
     struct Vec3f
     {
         float x, y, z;
+        bool operator!=(Vec3f second);
     };
 
     struct Vec3i
